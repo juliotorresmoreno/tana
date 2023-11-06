@@ -1,9 +1,9 @@
 version: "3.8"
 
 services:
-  flask-api:
+  tana-api:
     build: .
-    image: tana:latest
+    image: jliotorresmoreno/tana:latest
     container_name: tana-api-container
     ports:
       - "8000:8000"
