@@ -8,14 +8,14 @@ from pipe.Pipeline import Response, Arguments
 
 CHECKPOINT = config("QUESTION_ANSWERING_MODEL")
 
-
+DEVICE = config('DEVICE')
 class QuestionAnsweringModel(ModelBase):
     task = "question-answering"
     pipe: Pipeline
 
     def __init__(self, checkpoint: str = CHECKPOINT):
         super().__init__(self.task)
-        self.pipe = pipeline(self.task, model=checkpoint)
+        self.pipe = pipeline(self.task, model=checkpoint, device=DEVICE)
 
     def invoke(self, args: Arguments) -> Response:
         if (args.required_task == self.task):
@@ -39,4 +39,8 @@ class QuestionAnsweringModel(ModelBase):
         end_time = time.time()
         execution_time = end_time - start_time
 
-        return Response(context=result, execution_time=execution_time)
+        return Response(
+            context=result,
+            execution_time=execution_time,
+            required_task=args.required_task
+        )

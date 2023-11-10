@@ -23,6 +23,9 @@ llm = make_pipeline()
 async def ask(prompt: str):
     if prompt == "" or prompt == None:
         return {"answer": prompt, "response": ""}
+    
+    if prompt == "ping":
+        return {"answer": prompt, "response": "pong"}
 
     response = llm.invoke(Arguments(question=prompt))
     return {"answer": prompt, "response": response.result}

@@ -12,12 +12,12 @@
     { "index": 0, "task": "text2text-generation", "template": "{question}" },
     {
       "index": 1,
-      "task": "text2text-generation-from-context",
+      "task": "respond-based-on-context",
       "template": "You are a chatbot called tana having a conversation with a human\\n\\nContext: {context}\\nHuman: {question}\\nChatbot: "
     },
     {
       "index": 2,
-      "task": "text2text-generation-from-chat",
+      "task": "respond-based-on-chat",
       "template": "You are a chatbot called tana having a conversation with a human\\n\\nHuman: {question}\\nChatbot: \\n"
     }
   ]

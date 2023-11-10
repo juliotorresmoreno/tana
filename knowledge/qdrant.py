@@ -6,7 +6,7 @@ import time
 from pipe.Pipeline import Response, Arguments
 from constants import RESPOND_BASED_ON_CONTEXT
 
-DEVICE = config('DEVICE')
+DEVICE = 'cpu'
 ENCODER_MODEL_NAME = config('ENCODER_MODEL_NAME')
 QDRANT_URL = config('QDRANT_URL')
 

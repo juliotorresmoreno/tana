@@ -1,48 +1,27 @@
-from langchain.llms import HuggingFacePipeline
-from langchain.llms.huggingface_pipeline import HuggingFacePipeline
-from transformers import pipeline, Pipeline, AutoModelForCausalLM, AutoTokenizer, GenerationConfig
-from langchain.prompts import PromptTemplate
-from decouple import config
+from langchain.llms import Ollama
 from llm.ModelBase import ModelBase
-import time
 import pandas as pd
 from pipe.Pipeline import Response, Arguments
+from decouple import config
+from langchain.prompts import PromptTemplate
 from constants import RESPOND_BASED_ON_CONTEXT, RESPOND_BASED_ON_CHAT
+import time
 
-CHECKPOINT = config("TEXT_GENERATION_MODEL")
+OLLAMA_URL = config('OLLAMA_URL')
+
+CHECKPOINT = config("OLLAMA_TEXT_GENERATION_MODEL")
 
 tasks = pd.read_json('templates/text-generation.json', orient='table')
 
 
-class TextGenerationModel(ModelBase):
-    pipe: Pipeline
-    hf: HuggingFacePipeline
-    model: AutoModelForCausalLM
-    tokenizer: AutoTokenizer
+class OllamaTextGenerationModel(ModelBase):
     task = 'text-generation'
     default_template: str
+    engine: Ollama
 
     def __init__(self, checkpoint: str = CHECKPOINT):
         super().__init__(self.task)
-        self.tokenizer = AutoTokenizer.from_pretrained(checkpoint)
-        self.model = AutoModelForCausalLM.from_pretrained(
-            checkpoint,
-        )
-
-        self.generation_config = GenerationConfig(
-            max_new_tokens=512, do_sample=True, top_k=3,
-            eos_token_id=self.model.config.eos_token_id
-        )
-
-        self.pipe = pipeline(
-            self.task,
-            model=self.model,
-            tokenizer=self.tokenizer,
-            max_new_tokens=512,
-            do_sample=True, top_k=3,
-            eos_token_id=self.model.config.eos_token_id
-        )
-        self.hf = HuggingFacePipeline(pipeline=self.pipe)
+        self.engine = Ollama(base_url=OLLAMA_URL, model=checkpoint)
         self.default_template = tasks.template[tasks['task'] == self.task][0]
 
     def invoke(self, args: Arguments) -> Response:
@@ -72,10 +51,7 @@ class TextGenerationModel(ModelBase):
 
         prompt = PromptTemplate.from_template(template).format(**args)
 
-        inputs = self.tokenizer(prompt, return_tensors="pt")
-        outputs = self.model.generate(**inputs, generation_config=self.generation_config)
-
-        result = self.tokenizer.batch_decode(outputs, skip_special_tokens=False)[0]
+        result = self.engine(prompt)
 
         end_time = time.time()
         execution_time = end_time - start_time
