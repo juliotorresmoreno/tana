@@ -5,7 +5,8 @@ from sentence_transformers import SentenceTransformer
 from decouple import config
 from elasticsearch.helpers import bulk
 import time
-from pipe.Pipeline import Response
+from pipe.Pipeline import Response, Arguments
+from constants import RESPOND_BASED_ON_CONTEXT
 
 ELASTIC_SEARCH_URL = config("ELASTIC_SEARCH_URL")
 ELASTIC_SEARCH_USERNAME = config("ELASTIC_SEARCH_USERNAME")
@@ -64,9 +65,9 @@ class ElasticSearchLibrary(Library):
             body=index_settings
         )
 
-    def invoke(self, question: str, context: str, task: str) -> Response:
+    def invoke(self, args: Arguments) -> Response:
         start_time = time.time()
-        vector = self.encoder.encode(question)
+        vector = self.encoder.encode(args.question)
         knn_search = {
             "knn": {
                 "field": "vector",
@@ -94,7 +95,7 @@ class ElasticSearchLibrary(Library):
 
         return Response(
             context=content, result=None,
-            required_task='text2text-generation-from-context',
+            required_task=RESPOND_BASED_ON_CONTEXT,
             execution_time=execution_time)
 
     def create_bulk_actions(self, data_array):

@@ -1,5 +1,10 @@
-from abc import abstractmethod
 import time
+from abc import abstractmethod
+from decouple import config
+
+env = config('ENV')
+if env == None or env == '':
+    env = 'development'
 
 
 class Response:
@@ -7,17 +12,39 @@ class Response:
     result: str | None
     execution_time: float
     required_task: str
+    release: str
 
     def __init__(
         self,
         context: str = '',
         result: str = '',
         execution_time: float = 0,
-        required_task: str = ''
+        required_task: str = '',
+        release: str = ''
     ) -> None:
         self.context = context
         self.result = result
         self.execution_time = execution_time
+        self.required_task = required_task
+        self.release = release
+
+
+class Arguments:
+    question: str
+    context: str | None
+    required_task: str | None
+    release: str | None
+
+    def __init__(
+        self,
+        question: str,
+        context: str | None = None,
+        required_task: str | None = None,
+        release: str | None = None
+    ) -> None:
+        self.question = question
+        self.context = context
+        self.release = release
         self.required_task = required_task
 
 
@@ -29,7 +56,7 @@ class Node:
         self.next = None
 
     @abstractmethod
-    def invoke(self, question: str, context: str | None, task: str | None) -> Response:
+    def invoke(self, args: Arguments) -> Response:
         pass
 
 
@@ -76,30 +103,29 @@ class Pipeline(Node):
                 if current == self.first:
                     break
 
-    def invoke(self, question: str, context: str | None = None, task: str | None = None) -> Response:
+    def invoke(self, args: Arguments) -> Response:
         start_time = time.time()
         current = self.first
-        current_flow: Response | None = None
+        cf: Response | None = None
         if not self.is_empty():
             while True:
-                if current_flow == None:
-                    current_flow = current.invoke(question, context, task)
-                else:
-                    current_flow = current.invoke(
-                        question=question,
-                        context=current_flow.context,
-                        task=current_flow.required_task
-                    )
-                print(str(current.context) + ' ' +
-                      str(current_flow.execution_time), end=" -> ")
-                if isinstance(current_flow.result, str) and current_flow.result != '':
+                ok = cf != None
+                cf = current.invoke(Arguments(
+                    question=args.question,
+                    context=cf.context if ok else args.context,
+                    required_task=cf.required_task if ok else args.required_task,
+                    release=cf.release if ok else ''
+                ))
+
+                if isinstance(cf.result, str) and cf.result != '':
                     end_time = time.time()
                     execution_time = end_time - start_time
                     return Response(
-                        context=current_flow.context,
-                        result=current_flow.result,
-                        required_task=current_flow.required_task,
-                        execution_time=execution_time
+                        context=cf.context,
+                        result=cf.result,
+                        required_task=cf.required_task,
+                        execution_time=execution_time,
+                        release=cf.release
                     )
 
                 current = current.next
@@ -112,5 +138,6 @@ class Pipeline(Node):
             context=None,
             result=None,
             required_task=None,
+            release=cf.release if cf != None else '',
             execution_time=execution_time
         )

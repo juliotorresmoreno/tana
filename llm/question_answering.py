@@ -4,7 +4,7 @@ from transformers import pipeline, Pipeline
 from decouple import config
 from llm.ModelBase import ModelBase
 import time
-from pipe.Pipeline import Response
+from pipe.Pipeline import Response, Arguments
 
 CHECKPOINT = config("QUESTION_ANSWERING_MODEL")
 
@@ -17,19 +17,19 @@ class QuestionAnsweringModel(ModelBase):
         super().__init__(self.task)
         self.pipe = pipeline(self.task, model=checkpoint)
 
-    def invoke(self, question: str, context: str | None, task: str) -> Response:
-        if (task == self.task):
-            if context != None:
+    def invoke(self, args: Arguments) -> Response:
+        if (args.required_task == self.task):
+            if args.context != None:
                 raise ValueError("context is required!")
             else:
                 return
 
         start_time = time.time()
 
-        paragraphs = context.split('\n')
+        paragraphs = args.context.split('\n')
         context = '\n'.join([p for p in paragraphs if len(p) > 10])
 
-        response = self.pipe(question=question, context=context)
+        response = self.pipe(question=args.question, context=context)
 
         start = context[:response['start']].rfind('\n')
         end = context[response['end']:].find('\n')

@@ -3,6 +3,7 @@ from langchain.llms.huggingface_pipeline import HuggingFacePipeline
 from transformers import pipeline, Pipeline
 from decouple import config
 from llm.ModelBase import ModelBase
+from pipe.Pipeline import Arguments, Response
 
 
 CHECKPOINT = config("TEXT_CLASSIFICATION")
@@ -23,5 +24,5 @@ class TextClassificationModel(ModelBase):
             pipeline=self.pipe
         )
 
-    def invoke(self, question: str):
-        return ''
+    def invoke(self, args: Arguments) -> Response:
+        pass

@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from pipe.Pipeline import Node
+from pipe.Pipeline import Node, Arguments, Response
 from common.errors import NotImplementedMethodError
 
 class Library(Node):
@@ -17,5 +17,5 @@ class Library(Node):
         raise NotImplementedMethodError("create_index")
     
     @abstractmethod
-    def invoke(self, index_name: str, text: str):
+    def invoke(self, args: Arguments) -> Response:
         raise NotImplementedMethodError("create_index")

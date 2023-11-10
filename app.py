@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from decouple import config
 from flow import make_pipeline
+from pipe.Pipeline import Arguments
 
 app = FastAPI()
 
@@ -23,7 +24,7 @@ async def ask(prompt: str):
     if prompt == "" or prompt == None:
         return {"answer": prompt, "response": ""}
 
-    response = llm.invoke(prompt)
+    response = llm.invoke(Arguments(question=prompt))
     return {"answer": prompt, "response": response.result}
 
 if __name__ == "__main__":
