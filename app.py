@@ -1,30 +1,35 @@
-from neuralsearcher import NeuralSearcher
 from fastapi import FastAPI
-from dotenv import load_dotenv
-import os
-load_dotenv()
+from fastapi.middleware.cors import CORSMiddleware
+from decouple import config
+from flow import make_pipeline
 
 app = FastAPI()
 
-neural_searcher = NeuralSearcher(collection_name='root')
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+llm = make_pipeline()
 
 
 @app.get("/api/ask")
-async def search(q: str):
-    if q == "" or q == None:
-        return {"result": []}
-    result = neural_searcher.search(text=q, limit=1)
+async def ask(prompt: str):
+    if prompt == "" or prompt == None:
+        return {"answer": prompt, "response": ""}
 
-    if result == None:
-        return {"result": []}
-    
-    return {"result": result}
-
+    response = llm.invoke(prompt)
+    return {"answer": prompt, "response": response.result}
 
 if __name__ == "__main__":
     import uvicorn
 
-    HOST = os.environ["HOST"]
-    PORT = os.environ["PORT"]
+    HOST = config("HOST")
+    PORT = config("PORT")
 
     uvicorn.run(app, host=HOST, port=int(PORT))

@@ -46,6 +46,7 @@ fd = open(data_path)
 # payload is now an iterator over startup data
 payload = map(json.loads, fd)
 
+"""
 qdrant_client.upload_collection(
     collection_name=collection_name,
     vectors=vectors,
@@ -53,3 +54,8 @@ qdrant_client.upload_collection(
     ids=None,  # Vector ids will be assigned automatically
     batch_size=256,  # How many vectors will be uploaded in a single request?
 )
+"""
+
+print(type(payload))
+
+qdrant_client.close()
