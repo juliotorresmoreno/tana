@@ -9,6 +9,8 @@ from pipe.Pipeline import Response, Arguments
 CHECKPOINT = config("QUESTION_ANSWERING_MODEL")
 
 DEVICE = config('DEVICE')
+
+
 class QuestionAnsweringModel(ModelBase):
     task = "question-answering"
     pipe: Pipeline
@@ -18,16 +20,24 @@ class QuestionAnsweringModel(ModelBase):
         self.pipe = pipeline(self.task, model=checkpoint, device=DEVICE)
 
     def invoke(self, args: Arguments) -> Response:
-        if (args.required_task == self.task):
-            if args.context != None:
-                raise ValueError("context is required!")
-            else:
-                return
-
+        if args.context == '' or args.context == None:
+            return Response(
+                context=None,
+                execution_time=0,
+                required_task=args.required_task
+            )
+        
         start_time = time.time()
 
         paragraphs = args.context.split('\n')
         context = '\n'.join([p for p in paragraphs if len(p) > 10])
+
+        if context == '':
+            return Response(
+                context=None,
+                execution_time=0,
+                required_task=args.required_task
+            )
 
         response = self.pipe(question=args.question, context=context)
 

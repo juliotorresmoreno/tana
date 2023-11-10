@@ -109,6 +109,7 @@ class Pipeline(Node):
         cf: Response | None = None
         if not self.is_empty():
             while True:
+                print(current.context, end=' -> ')
                 ok = cf != None
                 cf = current.invoke(Arguments(
                     question=args.question,

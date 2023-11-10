@@ -32,7 +32,7 @@ class OllamaTextGenerationModel(ModelBase):
                     "context": args.context
                 })
             else:
-                return Response(execution_time=0)
+                return self.generate(RESPOND_BASED_ON_CHAT, {"question": args.question})
 
         if args.required_task == RESPOND_BASED_ON_CHAT:
             return self.generate(args.required_task, {"question": args.question})

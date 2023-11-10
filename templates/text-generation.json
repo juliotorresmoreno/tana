@@ -18,7 +18,7 @@
     {
       "index": 2,
       "task": "respond-based-on-chat",
-      "template": "You are a chatbot called tana having a conversation with a human\\n\\nHuman: {question}\\nChatbot: \\n"
+      "template": "You are a chatbot called tana having a conversation with a human\\n\\nHuman: {question}\\nChatbot: "
     }
   ]
 }

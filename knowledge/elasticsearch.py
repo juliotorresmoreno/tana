@@ -13,6 +13,7 @@ ELASTIC_SEARCH_USERNAME = config("ELASTIC_SEARCH_USERNAME")
 ELASTIC_SEARCH_PASSWORD = config("ELASTIC_SEARCH_PASSWORD")
 ENCODER_MODEL_NAME = config('ENCODER_MODEL_NAME')
 DEVICE = config('DEVICE')
+ENV = config('ENV')
 
 
 class ElasticSearchLibrary(Library):
@@ -26,7 +27,7 @@ class ElasticSearchLibrary(Library):
         self.engine = Elasticsearch(
             ELASTIC_SEARCH_URL,
             basic_auth=(ELASTIC_SEARCH_USERNAME, ELASTIC_SEARCH_PASSWORD),
-            verify_certs=True,
+            verify_certs=ENV == 'production',
             ca_certs="./certs/http_ca.crt",
         )
         self.encoder = SentenceTransformer(
