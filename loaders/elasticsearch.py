@@ -1,12 +1,10 @@
 
 from elasticsearch import Elasticsearch
-from knowledge.library import Library
 from sentence_transformers import SentenceTransformer
 from decouple import config
 from elasticsearch.helpers import bulk
 import time
-from pipe.Pipeline import Response, Arguments
-from constants import RESPOND_BASED_ON_CONTEXT
+from langchain.docstore.document import Document
 
 ELASTIC_SEARCH_URL = config("ELASTIC_SEARCH_URL")
 ELASTIC_SEARCH_USERNAME = config("ELASTIC_SEARCH_USERNAME")
@@ -16,18 +14,16 @@ DEVICE = config('DEVICE')
 ENV = config('ENV')
 
 
-class ElasticSearchLibrary(Library):
+class ElasticSearchLoader:
     engine: Elasticsearch
     encoder: SentenceTransformer
-    index_name: str
 
-    def __init__(self, index_name: str):
+    def __init__(self):
         super().__init__()
-        self.index_name = index_name
         self.engine = Elasticsearch(
             ELASTIC_SEARCH_URL,
             basic_auth=(ELASTIC_SEARCH_USERNAME, ELASTIC_SEARCH_PASSWORD),
-            verify_certs=ENV == 'production',
+            verify_certs=True,
             ca_certs="./certs/http_ca.crt",
         )
         self.encoder = SentenceTransformer(
@@ -66,38 +62,38 @@ class ElasticSearchLibrary(Library):
             body=index_settings
         )
 
-    def invoke(self, args: Arguments) -> Response:
-        start_time = time.time()
-        vector = self.encoder.encode(args.question)
+    def search(self, index_name: str, question: str):
+        vector = self.encoder.encode(question)
         knn_search = {
             "knn": {
                 "field": "vector",
                 "query_vector": vector,
-                "k": 3,
+                "k": 10,
                 "num_candidates": 20
             },
-            "fields": ["content", "command"]
+            "fields": ["content", "command", "title", 'url']
         }
 
         search_result = self.engine.knn_search(
-            index=self.index_name,
+            index=index_name,
             knn=knn_search["knn"],
             fields=knn_search["fields"],
             human=True,
             source=False
         )
 
-        content = ''
+        documents = []
         for hit in search_result['hits']['hits']:
-            content += '\n' + ''.join(hit['fields']['content'])
+            content = hit['fields']['content'][0][:10]
+            title = hit['fields']['title'][0]
+            url = hit['fields']['url'][0]
 
-        end_time = time.time()
-        execution_time = end_time - start_time
+            documents.append(Document(
+                page_content=content,
+                metadata={"source": url, "title": title}
+            ))
 
-        return Response(
-            context=content, result=None,
-            required_task=RESPOND_BASED_ON_CONTEXT,
-            execution_time=execution_time)
+        return documents
 
     def create_bulk_actions(self, data_array):
         actions = []
