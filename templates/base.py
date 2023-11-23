@@ -1,0 +1,4 @@
+
+
+class TemplateBase:
+    prompt: str

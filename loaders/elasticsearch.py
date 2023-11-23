@@ -3,13 +3,13 @@ from elasticsearch import Elasticsearch
 from sentence_transformers import SentenceTransformer
 from decouple import config
 from elasticsearch.helpers import bulk
-import time
 from langchain.docstore.document import Document
 
 ELASTIC_SEARCH_URL = config("ELASTIC_SEARCH_URL")
 ELASTIC_SEARCH_USERNAME = config("ELASTIC_SEARCH_USERNAME")
 ELASTIC_SEARCH_PASSWORD = config("ELASTIC_SEARCH_PASSWORD")
 ENCODER_MODEL_NAME = config('ENCODER_MODEL_NAME')
+ELASTIC_SEARCH_CERT = config('ELASTIC_SEARCH_CERT')
 DEVICE = config('DEVICE')
 ENV = config('ENV')
 
@@ -24,7 +24,7 @@ class ElasticSearchLoader:
             ELASTIC_SEARCH_URL,
             basic_auth=(ELASTIC_SEARCH_USERNAME, ELASTIC_SEARCH_PASSWORD),
             verify_certs=True,
-            ca_certs="./certs/http_ca.crt",
+            ca_certs=ELASTIC_SEARCH_CERT,
         )
         self.encoder = SentenceTransformer(
             ENCODER_MODEL_NAME, device=DEVICE)

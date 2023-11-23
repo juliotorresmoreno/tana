@@ -1,4 +1,4 @@
-from sentence_transformers import SentenceTransformer
+from loaders.elasticsearch import ElasticSearchLoader
 from datasets import load_dataset
 import sys
 import os
@@ -8,23 +8,25 @@ import time
 base = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 sys.path.insert(0, base)
 
-from knowledge.elasticsearch import ElasticSearchLibrary
 
 index_name = "wiki"
 
-lib = ElasticSearchLibrary(index_name)
+lib = ElasticSearchLoader(index_name)
 dataset = load_dataset("graelo/wikipedia", "20230601.en")['train']
 batch_size = 100
 
+
 def get_cpu_temperature():
     try:
-        command = "sensors | grep 'Core 0' | awk '{print $3}'"  # Esto puede variar según tu sistema
-        temperature_str = subprocess.check_output(command, shell=True).decode().strip()
-        temperature = float(temperature_str[:-2])  # Convierte la temperatura en un número flotante
+        command = "sensors | grep 'Core 0' | awk '{print $3}'"
+        temperature_str = subprocess.check_output(
+            command, shell=True).decode().strip()
+        temperature = float(temperature_str[:-2])
         return temperature
     except Exception as e:
         print(f'No se pudo obtener la temperatura de la CPU: {str(e)}')
-        return None  # Retorna None si no se puede obtener la temperatura
+        return None
+
 
 start = 0
 

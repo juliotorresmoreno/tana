@@ -9,7 +9,6 @@ class QuestionPayload(BaseModel):
     prompt: str
     index_name: str | None = None
 
-
 @router.post("/ai/question")
 async def ask(payload: QuestionPayload):
     prompt = payload.prompt
