@@ -1,5 +1,5 @@
 
-from callbacks.realtime import StreamingWebsocketCallbackHandler
+from callbacks.websocket import StreamingWebsocketCallbackHandler
 from langchain.llms.llamacpp import LlamaCpp
 from fastapi import WebSocket
 from decouple import config
