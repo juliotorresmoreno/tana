@@ -1,20 +1,17 @@
 
-from langchain.chains import RetrievalQA
-from langchain.llms import base
-from langchain.callbacks.base import Callbacks
-from langchain import hub
-from langchain.embeddings import GPT4AllEmbeddings
-from langchain.vectorstores import Chroma
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from loaders.elasticsearch import ElasticSearchLoader
 import time
 from decouple import config
+from langchain.llms import base
+from langchain.chains import RetrievalQA
+from langchain.embeddings import GPT4AllEmbeddings
+from langchain.vectorstores import Chroma
+from langchain.callbacks.base import Callbacks
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from loaders.elasticsearch import ElasticSearchLoader
 from langchain.prompts import PromptTemplate
 
 
 OLLAMA_TEXT_GENERATION_MODEL = config('OLLAMA_TEXT_GENERATION_MODEL')
-#QA_CHAIN_PROMPT = hub.pull("rlm/rag-prompt-llama")
-#QA_CHAIN_PROMPT.messages[0].prompt.template = "[INST]<<SYS>>Soy una inteligencia artificial con intereses sociales, quiero ser amiga de todos.<</SYS>>\n{question}[/INST]"
 template = PromptTemplate.from_template("[INST]<<SYS>>Soy una inteligencia artificial con intereses sociales, quiero ser amiga de todos.<</SYS>>\n{question}[/INST]")
 
 class LLMBase:

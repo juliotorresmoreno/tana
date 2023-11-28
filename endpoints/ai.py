@@ -1,65 +1,98 @@
-from fastapi import APIRouter
-from engine.mmlu import engine
-from pydantic import BaseModel
-from fastapi.responses import StreamingResponse
-from langchain.callbacks import AsyncIteratorCallbackHandler
-from typing import Awaitable, AsyncIterable
-import inspect
-import asyncio
+import json
 from embeddings.hf import HFEncoder
+from flask import Blueprint, request, Response
+from typing import TypedDict
+from services.auth import Auth
+from services.history import History
+from services.bots import Bots
+from services.llm import LLM
+from models.session import Session
+from models.bot import Bot
 
+auth = Auth()
+bots = Bots()
+llm = LLM()
+router = Blueprint('ai', __name__)
 encoder = HFEncoder()
-router = APIRouter()
+history = History()
 
-class QuestionPayload(BaseModel):
-    prompt: str
-    index_name: str | None = None
+@router.get("/status")
+async def status():
+    return { "success": "ok" }
 
-def check_awaitable(obj):
-    return inspect.iscoroutinefunction(obj) or inspect.iscoroutine(obj)
+@router.delete("/conversation/<int:bot_id>")
+async def delete(bot_id: int):
+    headers = request.headers
+    authorization = headers.get('authorization')
+    validation, session = await auth.validate(authorization)
+    if not validation:
+        return Response(
+            json.dumps({ "message": "Authentication is required!" }), 
+            mimetype="text/event-stream"
+        )
+    history.delete(session['user'], bot_id)
+    return Response('', 204)
 
-async def send_message(payload: QuestionPayload) -> AsyncIterable[str]:
-    prompt = payload.prompt
-    index_name = payload.index_name
+@router.get("/conversation/<int:bot_id>")
+def conversation(bot_id: int):
+    headers = request.headers
+    authorization = headers.get('authorization')
+    validation, session = auth.validate(authorization)
+    if not validation:
+        return Response(
+            json.dumps({ "message": "Authentication is required!" }), 
+            mimetype="text/event-stream"
+        )
+    return history.get(session['user'], bot_id)
+
+@router.post("/question/<int:bot_id>")
+def question(bot_id: int):
+    headers = request.headers
+    authorization = headers.get('authorization')
+    validation, session: Session = auth.validate(authorization)
+    if not validation:
+        return Response(
+            response=json.dumps({ "message": "Authentication is required!" }), 
+            mimetype="application/json", status=401
+        )
     
-    callback = AsyncIteratorCallbackHandler()
+    prompt: str = request.json['prompt']
+    index_name = None
+    if "index_name" in request.json:
+        index_name = request.json['index_name']
 
-    async def wrap_done(fn: Awaitable, event: asyncio.Event):
-        """Wrap an awaitable with a event to signal when it's done or an exception is raised."""
-        try:
-            if check_awaitable(fn):
-                await fn
-        except Exception as e:
-            print(f"Caught exception: {e}")
-        finally:
-            event.set()
-
-    task = asyncio.create_task(wrap_done(
-        engine.invoke(prompt, index_name, [callback]),
-        callback.done),
-    )
-
-    async for token in callback.aiter():
-        print(token)
-        yield token
-
-@router.post("/ai/question")
-async def ask(response: StreamingResponse, payload: QuestionPayload):
-    prompt = payload.prompt
     if prompt == "" or prompt == None:
         return "Hi, do you need something?"
 
     if prompt == "ping":
         return "pong"
     
-    return StreamingResponse(send_message(payload))
+    validation, bot: Bot = bots.get(authorization=authorization, bot_id=bot_id)
+    if not validation:
+        return Response(
+            json.dumps({ "message": "Authentication is requires!" }), 
+            mimetype="application/json",
+            status=400
+        )
+    
+    chat_history = History(user=session['user'], bot=bot)
 
-class EmbeddingsPayload(BaseModel):
+    return Response(llm.invoke(
+        prompt=prompt, 
+        index_name=index_name,
+        chat_history=chat_history
+    ), mimetype="text/event-stream")
+
+class EmbeddingsPayload(TypedDict):
     prompt: str
 
-@router.post("/ai/embeddings")
-async def embeddings(payload: EmbeddingsPayload):
-    vector = encoder.encode(payload.prompt)
-    return vector
+@router.post("/embeddings")
+async def embeddings():
+    payload: EmbeddingsPayload = request.json
+    
+    if "prompt" not in payload:
+        return Response(json.dumps({ "message": "prompt is required!" }), 400)
+    
+    return encoder.encode(payload["prompt"])
 
 router_ai = router

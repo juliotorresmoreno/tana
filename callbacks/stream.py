@@ -1,80 +1,81 @@
-from __future__ import annotations
+import queue
+from typing import Any, Dict, List, Union
 
-from typing import Any, Dict, List
-from langchain.callbacks.base import BaseCallbackHandler
-from langchain.schema.agent import AgentAction, AgentFinish
-from langchain.schema.messages import BaseMessage
-from langchain.schema.output import LLMResult
-from typing import Callable
+from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+from langchain.schema import LLMResult
+
+STOP_ITEM = "[END]"
+"""
+This is a special item that is used to signal the end of the stream.
+"""
 
 
-class StreamingPipeCallbackHandler(BaseCallbackHandler):
-    """Callback handler for streaming. Only works with LLMs that support streaming."""
+class StreamingStdOutCallbackHandlerYield(StreamingStdOutCallbackHandler):
+    """
+    This is a callback handler that yields the tokens as they are generated.
+    For a usage example, see the :func:`generate` function below.
+    """
 
-    callback: Callable
+    q: queue.Queue
+    """
+    The queue to write the tokens to as they are generated.
+    """
 
-    def __init__(self, callback: Callable = None) -> None:
+    def __init__(self, q: queue.Queue) -> None:
+        """
+        Initialize the callback handler.
+        q: The queue to write the tokens to as they are generated.
+        """
         super().__init__()
-        self.callback = callback
+        self.q = q
 
-    async def on_llm_start(
+    def on_llm_start(
         self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
     ) -> None:
         """Run when LLM starts running."""
-
-    async def on_chat_model_start(
-        self,
-        serialized: Dict[str, Any],
-        messages: List[List[BaseMessage]],
-        **kwargs: Any
-    ) -> None:
-        """Run when LLM starts running."""
+        with self.q.mutex:
+            self.q.queue.clear()
 
     def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
         """Run on new LLM token. Only available when streaming is enabled."""
-        if self.callback == None:
-            return
-        if token == None:
-            return
-        
-        data_chunk = token.encode('utf-8')
-        print(token)
-        self.callback(data_chunk)
+        # Writes to stdout
+        # sys.stdout.write(token)
+        # sys.stdout.flush()
+        # Pass the token to the generator
+        self.q.put(token)
 
-    async def on_llm_end(self, response: LLMResult, **kwargs: Any) -> None:
+    def on_llm_end(self, response: LLMResult, **kwargs: Any) -> None:
         """Run when LLM ends running."""
+        self.q.put(STOP_ITEM)
 
-    async def on_llm_error(self, error: BaseException, **kwargs: Any) -> None:
+    def on_llm_error(
+        self, error: Union[Exception, KeyboardInterrupt], **kwargs: Any
+    ) -> None:
         """Run when LLM errors."""
+        self.q.put("%s: %s" % (type(error).__name__, str(error)))
+        self.q.put(STOP_ITEM)
 
-    async def on_chain_start(
-        self, serialized: Dict[str, Any], inputs: Dict[str, Any], **kwargs: Any
-    ) -> None:
-        """Run when chain starts running."""
 
-    async def on_chain_end(self, outputs: Dict[str, Any], **kwargs: Any) -> None:
-        """Run when chain ends running."""
+def generate(rq: queue.Queue):
+    """
+    This is a generator that yields the items in the queue until it reaches the stop item.
 
-    async def on_chain_error(self, error: BaseException, **kwargs: Any) -> None:
-        """Run when chain errors."""
+    Usage example:
+    ```
+    def askQuestion(callback_fn: StreamingStdOutCallbackHandlerYield):
+        llm = OpenAI(streaming=True, callbacks=[callback_fn])
+        return llm(prompt="Write a poem about a tree.")
 
-    async def on_tool_start(
-        self, serialized: Dict[str, Any], input_str: str, **kwargs: Any
-    ) -> None:
-        """Run when tool starts running."""
-
-    async def on_agent_action(self, action: AgentAction, **kwargs: Any) -> Any:
-        """Run on agent action."""
-        pass
-
-    async def on_tool_end(self, output: str, **kwargs: Any) -> None:
-        """Run when tool ends running."""
-
-    async def on_tool_error(self, error: BaseException, **kwargs: Any) -> None:
-        """Run when tool errors."""
-
-    async def on_text(self, text: str, **kwargs: Any) -> None:
-        """Run on arbitrary text."""
-
-    async def on_agent_finish(self, finish: AgentFinish, **kwargs: Any) -> None:
-        """Run on agent end."""
+    @app.route("/", methods=["GET"])
+    def generate_output():
+        q = Queue()
+        callback_fn = StreamingStdOutCallbackHandlerYield(q)
+        threading.Thread(target=askQuestion, args=(callback_fn,)).start()
+        return Response(generate(q), mimetype="text/event-stream")
+    ```
+    """
+    while True:
+        result: str = rq.get()
+        if result == STOP_ITEM or result is None:
+            break
+        yield result
