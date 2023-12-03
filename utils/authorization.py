@@ -5,6 +5,6 @@ def parse_token(token: str):
         raise "token is required!"
     
     if token.lower().startswith("bearer"):
-        return "authorization=" + token[7:]
+        return "token=" + token[7:]
     
-    return "authorization=" + token
+    return "token=" + token

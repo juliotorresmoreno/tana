@@ -1,7 +1,6 @@
 
 import time
 from decouple import config
-from langchain.llms import base
 from langchain.chains import RetrievalQA
 from langchain.embeddings import GPT4AllEmbeddings
 from langchain.vectorstores import Chroma
@@ -32,13 +31,13 @@ class LLMBase:
         return Chroma.from_documents(
             documents=all_splits, embedding=GPT4AllEmbeddings())
 
-    def invoke(self, question: str, llm: base, index_name: str, callbacks: Callbacks):
+    def invoke(self, question: str, index_name: str, callbacks: Callbacks):
         start_time = time.time()
         base_context = self.get_context(
             index_name=index_name, question=question)
         if base_context:
             chain_args = {
-                "llm": llm,
+                "llm": self.provider,
                 "chain_type_kwargs": {"prompt": template},
                 'retriever': base_context.as_retriever()
             }
@@ -46,10 +45,10 @@ class LLMBase:
             result = qa_chain({ "query": question }, callbacks=callbacks)['result']
         else:
             chain_args = {
-                "llm": llm,
+                "llm": self.provider,
                 "chain_type_kwargs": {"prompt": template}
             }
-            result = llm(question, callbacks=callbacks)
+            result = self.provider(question, callbacks=callbacks)
 
         execution_time = time.time() - start_time
 

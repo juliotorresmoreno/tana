@@ -10,7 +10,10 @@ class Auth:
             return False, None
         
         authorization = parse_token(authorization)
-        url = f"{API_URL}/auth/session?{authorization}"
+        url = f"{API_URL}/api/auth/session?{authorization}"
         response = requests.get(url)
         
-        return response.status_code < 300, response.json()
+        if response.status_code < 300:
+            return True, response.json()
+
+        return False, None

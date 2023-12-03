@@ -11,6 +11,8 @@ class Bots:
             return False, None
         
         authorization = parse_token(authorization)
-        url = f"{API_URL}/mmlu/{str(bot_id)}?{authorization}"
+        url = f"{API_URL}/api/mmlu/{str(bot_id)}?{authorization}"
         response = requests.get(url)
-        return response.status_code < 300, response.json()
+        if response.status_code < 300:
+            return True, response.json()
+        return False, None

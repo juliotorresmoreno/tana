@@ -23,6 +23,5 @@ class OllamaLLM(llm_base.LLMBase):
         return super().invoke(
             question=question,
             index_name=index_name,
-            llm=self.provider,
             callbacks=callbacks
         )
